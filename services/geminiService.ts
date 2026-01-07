@@ -1,16 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { PropertyDetails, ValuationResponse, ValuationData, GroundingSource } from "../types";
 
-// Safe access to API key to prevent 'process is not defined' errors in browser
+// Retrieve API key from process.env.API_KEY.
+// We access it directly inside a try-catch block to allow build tools (like Vite/Webpack)
+// to statically replace 'process.env.API_KEY' with the actual key string,
+// even if the 'process' global is not polyfilled in the browser.
 const getApiKey = () => {
   try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env.API_KEY;
-    }
+    return process.env.API_KEY;
   } catch (e) {
-    // Ignore error if process is not available
+    // If process is not defined and not replaced by bundler, return undefined
+    return undefined;
   }
-  return undefined;
 };
 
 const apiKey = getApiKey();
@@ -47,7 +48,7 @@ const getFallbackData = (details: PropertyDetails): ValuationData => {
 export const getValuation = async (details: PropertyDetails): Promise<ValuationResponse> => {
   if (!apiKey) {
     console.error("API Key is missing from process.env.API_KEY");
-    throw new Error("API Key is missing. If you are on Vercel, ensure 'API_KEY' is set in Environment Variables and exposed to the client (or configured in your bundler).");
+    throw new Error("API Key is missing. If you are deploying to Netlify/Vercel, ensure 'API_KEY' is added in 'Site Settings > Environment Variables' and that your build tool is configured to expose it (or use a compatible variable name if required by your framework).");
   }
 
   const ai = new GoogleGenAI({ apiKey });
