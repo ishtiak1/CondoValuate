@@ -11,7 +11,8 @@ import {
 } from 'recharts';
 import { ValuationData, GroundingSource, PropertyDetails } from '../types';
 import { formatCurrency, formatNumber, calculateProfit, calculateMortgage } from '../utils/helpers';
-import { ArrowUpRight, ArrowDownRight, Info, ExternalLink, Share2, Check, Printer, BarChart3, AlertTriangle, Briefcase, Calculator, Mail, ArrowUp, HelpCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Info, ExternalLink, Share2, Check, Printer, BarChart3, AlertTriangle, Briefcase, Calculator, Mail, ArrowUp, HelpCircle, Code } from 'lucide-react';
+import EmbedModal from './EmbedModal';
 
 interface Props {
   data: ValuationData;
@@ -45,6 +46,8 @@ const SimpleTooltip = ({ message }: { message: string }) => (
 
 const ValuationResult: React.FC<Props> = ({ data, sources, input }) => {
   const [copied, setCopied] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
+
   const profit = calculateProfit(data.estimatedValue, input.originalPrice);
   const isProfitable = profit >= 0;
 
@@ -79,10 +82,18 @@ const ValuationResult: React.FC<Props> = ({ data, sources, input }) => {
   };
 
   return (
+    <>
     <div className="space-y-8 animate-fade-in-up">
       
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row justify-end gap-3 print:hidden">
+          <button 
+            onClick={() => setShowEmbed(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm focus:ring-2 focus:ring-blue-100 outline-none"
+          >
+            <Code className="w-4 h-4 text-gray-600" />
+            Embed
+          </button>
           <button 
             onClick={handleShare}
             className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm focus:ring-2 focus:ring-blue-100 outline-none"
@@ -414,6 +425,9 @@ const ValuationResult: React.FC<Props> = ({ data, sources, input }) => {
         </div>
       </div>
     </div>
+    
+    <EmbedModal isOpen={showEmbed} onClose={() => setShowEmbed(false)} />
+    </>
   );
 };
 

@@ -1,7 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import { PropertyDetails, ValuationResponse, ValuationData, GroundingSource } from "../types";
 
-const apiKey = process.env.API_KEY;
+// Safe access to API key to prevent 'process is not defined' errors in browser
+const getApiKey = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore error if process is not available
+  }
+  return undefined;
+};
+
+const apiKey = getApiKey();
 
 // Fallback data in case parsing fails or API is weird, to ensure UI doesn't crash
 const getFallbackData = (details: PropertyDetails): ValuationData => {
@@ -16,7 +28,7 @@ const getFallbackData = (details: PropertyDetails): ValuationData => {
     originalPPSF: Math.round(originalPPSF),
     currentPPSF: Math.round(currentPPSF),
     appreciationPercentage: Math.round((growthFactor - 1) * 100),
-    marketAnalysis: "Due to high API traffic or parsing limitations, this is a conservative algorithmic estimate based on historical GTA averages (approx 2% yearly). For a precise market value, please consult a real estate agent.",
+    marketAnalysis: "Due to technical difficulties retrieving live data, this is a conservative algorithmic estimate based on historical GTA averages (approx 2% yearly). Please consult a real estate agent for accuracy.",
     yearByYearTrend: Array.from({ length: yearsHeld + 1 }, (_, i) => ({
       year: details.yearPurchased + i,
       avgPrice: Math.round(details.originalPrice * Math.pow(1.02, i))
@@ -34,7 +46,8 @@ const getFallbackData = (details: PropertyDetails): ValuationData => {
 
 export const getValuation = async (details: PropertyDetails): Promise<ValuationResponse> => {
   if (!apiKey) {
-    throw new Error("API Key is missing. Please set the API_KEY environment variable.");
+    console.error("API Key is missing from process.env.API_KEY");
+    throw new Error("API Key is missing. If you are on Vercel, ensure 'API_KEY' is set in Environment Variables and exposed to the client (or configured in your bundler).");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -90,11 +103,16 @@ export const getValuation = async (details: PropertyDetails): Promise<ValuationR
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 1024 } // Allow some thinking for math/search synthesis
+        // Adjust thinking budget or remove if latency is too high, 
+        // but keeping it for better reasoning per requirements.
+        thinkingConfig: { thinkingBudget: 1024 } 
       },
     });
 
     const text = response.text;
+    if (!text) {
+        throw new Error("Received empty response from Gemini API");
+    }
     
     // Extract Grounding Metadata
     const sources: GroundingSource[] = response.candidates?.[0]?.groundingMetadata?.groundingChunks
@@ -123,9 +141,17 @@ export const getValuation = async (details: PropertyDetails): Promise<ValuationR
       sources
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching valuation:", error);
-    // Fallback if API fails completely
+    
+    // If it's a critical API error (like 400/403/500), we might want to throw it 
+    // to show in the UI, or just return fallback data. 
+    // Returning fallback data is safer for UX unless the key is totally invalid.
+    
+    if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
+       throw error; // Rethrow auth errors
+    }
+
     return {
       data: getFallbackData(details),
       sources: []
