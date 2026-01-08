@@ -15,7 +15,7 @@ const Header: React.FC = () => {
           </div>
         </div>
         <div className="hidden md:flex items-center space-x-6">
-          <span className="text-sm font-medium text-gray-600">Powered by Google Gemini</span>
+          <span className="text-sm font-medium text-gray-600">Algorithmic Estimate</span>
         </div>
       </div>
     </header>

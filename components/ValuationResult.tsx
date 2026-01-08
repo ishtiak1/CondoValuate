@@ -15,7 +15,7 @@ import { ArrowUpRight, ArrowDownRight, Info, ExternalLink, Share2, Check, Printe
 
 interface Props {
   data: ValuationData;
-  sources: GroundingSource[];
+  sources: GroundingSource[]; // This will always be empty now but kept for type compatibility
   input: PropertyDetails;
 }
 
@@ -390,8 +390,8 @@ const ValuationResult: React.FC<Props> = ({ data, sources, input }) => {
             </p>
           </div>
 
-          {/* Sources */}
-          {sources.length > 0 && (
+          {/* Sources - This section is removed as there are no external sources with local valuation */}
+          {/* {sources.length > 0 && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h4 className="text-gray-900 font-bold mb-4 text-sm uppercase tracking-wide">Data Sources</h4>
               <ul className="space-y-3">
@@ -410,7 +410,7 @@ const ValuationResult: React.FC<Props> = ({ data, sources, input }) => {
                 ))}
               </ul>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

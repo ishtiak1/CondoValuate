@@ -44,7 +44,9 @@ export const CITIES = [
   'Brampton',
   'Etobicoke',
   'North York',
-  'Scarborough'
+  'Scarborough',
+  'Ajax', // Added
+  'Pickering' // Added
 ];
 
 export const YEARS = [2019, 2020, 2021, 2022, 2023, 2024];
