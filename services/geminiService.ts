@@ -1,17 +1,34 @@
 import { GoogleGenAI } from "@google/genai";
 import { PropertyDetails, ValuationResponse, ValuationData, GroundingSource } from "../types";
 
-// Retrieve API key from process.env.API_KEY.
-// We access it directly inside a try-catch block to allow build tools (like Vite/Webpack)
-// to statically replace 'process.env.API_KEY' with the actual key string,
-// even if the 'process' global is not polyfilled in the browser.
-const getApiKey = () => {
+// Retrieve API key from various environment variable patterns.
+// This supports Vite (import.meta.env), CRA (REACT_APP_), Next.js (NEXT_PUBLIC_), and standard process.env.
+const getApiKey = (): string | undefined => {
+  // 1. Try Vite's import.meta.env
   try {
-    return process.env.API_KEY;
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
+      // @ts-ignore
+      if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
+    }
   } catch (e) {
-    // If process is not defined and not replaced by bundler, return undefined
-    return undefined;
+    // Ignore
   }
+
+  // 2. Try standard process.env
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.API_KEY) return process.env.API_KEY;
+      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+      if (process.env.NEXT_PUBLIC_API_KEY) return process.env.NEXT_PUBLIC_API_KEY;
+    }
+  } catch (e) {
+    // Ignore
+  }
+
+  return undefined;
 };
 
 const apiKey = getApiKey();
@@ -47,8 +64,8 @@ const getFallbackData = (details: PropertyDetails): ValuationData => {
 
 export const getValuation = async (details: PropertyDetails): Promise<ValuationResponse> => {
   if (!apiKey) {
-    console.error("API Key is missing from process.env.API_KEY");
-    throw new Error("API Key is missing. If you are deploying to Netlify/Vercel, ensure 'API_KEY' is added in 'Site Settings > Environment Variables' and that your build tool is configured to expose it (or use a compatible variable name if required by your framework).");
+    console.error("API Key is missing.");
+    throw new Error("API Key is missing. Please check your Vercel/Netlify settings. If using Vite, name your variable 'VITE_API_KEY'. If using Create-React-App, 'REACT_APP_API_KEY'. If using Next.js, 'NEXT_PUBLIC_API_KEY'. Or use 'API_KEY' if your bundler exposes it.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -145,14 +162,12 @@ export const getValuation = async (details: PropertyDetails): Promise<ValuationR
   } catch (error: any) {
     console.error("Error fetching valuation:", error);
     
-    // If it's a critical API error (like 400/403/500), we might want to throw it 
-    // to show in the UI, or just return fallback data. 
-    // Returning fallback data is safer for UX unless the key is totally invalid.
-    
-    if (error.message && (error.message.includes("API Key") || error.message.includes("403"))) {
-       throw error; // Rethrow auth errors
+    // Only rethrow specific configuration errors so the user knows to fix them
+    if (error.message && (error.message.includes("API Key"))) {
+       throw error;
     }
 
+    // For other runtime errors (network, AI hallucination), return fallback to keep app usable
     return {
       data: getFallbackData(details),
       sources: []
